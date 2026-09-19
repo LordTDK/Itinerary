@@ -379,24 +379,10 @@ export default function App() {
           {activeTab === 'route' && (
             <RouteMobileView
               itinerary={itinerary}
-              activeLocation={tripStatus.currentLocation}
-              onSelectCityFilter={(city) => {
-                setActiveTab('schedule');
-                const matchDay = itinerary.days.find(d => 
-                  d.primaryLocation.toLowerCase().includes(city.toLowerCase()) || 
-                  d.locations.some(l => l.toLowerCase().includes(city.toLowerCase()))
-                );
-                if (matchDay) {
-                  setSelectedDayNumber(matchDay.dayNumber);
-                }
-              }}
-              onJumpToDate={(d) => {
-                const match = itinerary.days.find(day => day.date === d);
-                if (match) {
-                  setSelectedDayNumber(match.dayNumber);
-                  setActiveTab('schedule');
-                }
-              }}
+              tripStatus={tripStatus}
+              currentDate={currentDate}
+              geo={geo}
+              onToggleItemComplete={handleToggleItemComplete}
             />
           )}
 
