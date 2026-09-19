@@ -73,3 +73,16 @@ export interface TripStatus {
   currentLocation?: string;
   currentHotel?: string;
 }
+
+export interface SavedTrip {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  itemCount: number;
+  startDate: string;
+  endDate: string;
+  destinationSummary: string;
+  data: ItineraryData;
+}
+

@@ -14,9 +14,14 @@ import {
   ExternalLink,
   Plus,
   Github,
-  PiggyBank
+  PiggyBank,
+  Trash2,
+  FolderHeart,
+  MapPin,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
-import { ItineraryData, TripStatus } from '../types';
+import { ItineraryData, TripStatus, SavedTrip } from '../types';
 import { formatShortDate, formatFriendlyDate, getTodayString } from '../utils/dateUtils';
 
 interface HubMobileViewProps {
@@ -24,12 +29,15 @@ interface HubMobileViewProps {
   tripStatus: TripStatus;
   currentDate: string;
   isSimulatedDate: boolean;
+  savedTrips: SavedTrip[];
+  activeTripId: string | null;
+  onSelectTrip: (tripId: string) => void;
+  onDeleteTrip: (tripId: string) => void;
   onResetDate: () => void;
   onSelectDate: (date: string) => void;
   onOpenUploadModal: () => void;
   onOpenGithubGuide: () => void;
   onExportCsv: () => void;
-  onSelectSample: (key: 'cotswolds' | 'japan' | 'europe') => void;
 }
 
 export const HubMobileView: React.FC<HubMobileViewProps> = ({
@@ -37,19 +45,23 @@ export const HubMobileView: React.FC<HubMobileViewProps> = ({
   tripStatus,
   currentDate,
   isSimulatedDate,
+  savedTrips,
+  activeTripId,
+  onSelectTrip,
+  onDeleteTrip,
   onResetDate,
   onSelectDate,
   onOpenUploadModal,
   onOpenGithubGuide,
   onExportCsv,
-  onSelectSample,
 }) => {
   const [notes, setNotes] = useState<string>(() => {
     return localStorage.getItem('holiday_itinerary_quick_notes') || 
-      '• Travel Insurance: Allianz Policy #98124\n• Local Police: 110 | Medical: 119\n• Hotel check-in: Passport required for all guests\n• Universal travel power adapter packed in day bag';
+      '• Travel Insurance: Policy active\n• Booking Confirmation ref: In email\n• Hotel check-in: Photo ID required for all guests\n• Car charger & route maps ready';
   });
   const [isSaved, setIsSaved] = useState(false);
   const [showPwaTip, setShowPwaTip] = useState(false);
+  const [tripIdPendingDelete, setTripIdPendingDelete] = useState<string | null>(null);
 
   const handleNotesChange = (val: string) => {
     setNotes(val);
@@ -113,66 +125,158 @@ export const HubMobileView: React.FC<HubMobileViewProps> = ({
         </div>
       </div>
 
-      {/* CSV Management Card */}
+      {/* Saved Trips on this Device (Local Storage) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <FolderHeart className="w-4 h-4 text-teal-400" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              Saved Trips on this Device
+            </h3>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold border border-slate-700">
+            {savedTrips.length} {savedTrips.length === 1 ? 'Trip' : 'Trips'}
+          </span>
+        </div>
+
+        <p className="text-[11px] text-slate-400">
+          All uploaded itineraries are stored locally in your browser so you can access and navigate them offline. You can delete them at any time.
+        </p>
+
+        {/* List of saved trips */}
+        <div className="space-y-2 pt-1">
+          {savedTrips.length === 0 ? (
+            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 text-center space-y-2">
+              <p className="text-xs text-slate-400">No saved trips stored on this device.</p>
+              <button
+                onClick={onOpenUploadModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500 text-slate-950 font-bold text-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Upload a Trip CSV</span>
+              </button>
+            </div>
+          ) : (
+            savedTrips.map((trip) => {
+              const isActive = trip.id === activeTripId || (activeTripId === null && trip.title === itinerary.title);
+              const isConfirmingDelete = tripIdPendingDelete === trip.id;
+
+              return (
+                <div
+                  key={trip.id}
+                  className={`p-3.5 rounded-2xl border transition ${
+                    isActive
+                      ? 'bg-slate-800/90 border-teal-500/60 shadow-sm'
+                      : 'bg-slate-850/60 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm text-white truncate">
+                          {trip.title}
+                        </span>
+                        {isActive && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[10px] font-bold">
+                            <CheckCircle2 className="w-3 h-3" /> Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                        <span>{trip.itemCount} stops</span>
+                        <span>•</span>
+                        <span>{formatShortDate(trip.startDate)} – {formatShortDate(trip.endDate)}</span>
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {!isActive && !isConfirmingDelete && (
+                        <button
+                          onClick={() => onSelectTrip(trip.id)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-400 border border-slate-700 text-xs font-semibold active:scale-95 transition"
+                        >
+                          Open
+                        </button>
+                      )}
+
+                      {!isConfirmingDelete && (
+                        <button
+                          onClick={() => setTripIdPendingDelete(trip.id)}
+                          title="Delete trip from device"
+                          aria-label={`Delete ${trip.title}`}
+                          className="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-rose-950/50 hover:text-rose-400 text-slate-400 flex items-center justify-center border border-slate-700/60 active:scale-95 transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Inline Delete Confirmation */}
+                  {isConfirmingDelete && (
+                    <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-300">
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>Delete "{trip.title}" from this device?</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            onDeleteTrip(trip.id);
+                            setTripIdPendingDelete(null);
+                          }}
+                          className="flex-1 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition"
+                        >
+                          Yes, Delete
+                        </button>
+                        <button
+                          onClick={() => setTripIdPendingDelete(null)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Upload Button */}
+        <div className="pt-2">
+          <button
+            onClick={onOpenUploadModal}
+            className="w-full min-h-[44px] px-3 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-98 transition"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Upload New Itinerary CSV</span>
+          </button>
+        </div>
+      </div>
+
+      {/* CSV Export & Backup Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
         <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-          <Upload className="w-4 h-4 text-teal-400" />
+          <Download className="w-4 h-4 text-teal-400" />
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-            Itinerary CSV Data
+            Export Current Itinerary
           </h3>
         </div>
 
         <p className="text-[11px] text-slate-400">
-          Load your customized holiday schedule or export the current itinerary for offline backup.
+          Download the active itinerary as a CSV file to save as a file on your phone or share with travel companions.
         </p>
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={onOpenUploadModal}
-            className="min-h-[44px] px-3 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow active:scale-98 transition"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Upload CSV</span>
-          </button>
-
-          <button
-            onClick={onExportCsv}
-            className="min-h-[44px] px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 border border-slate-700/60 active:scale-98 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
-          </button>
-        </div>
-
-        {/* Sample Trips Switcher */}
-        <div className="pt-2 border-t border-slate-800/80">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-            Load Pre-Configured Sample Trips
-          </span>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              onClick={() => onSelectSample('cotswolds')}
-              className="py-2.5 px-3 rounded-xl bg-teal-950/40 hover:bg-teal-900/50 text-slate-300 text-xs font-medium border border-teal-500/40 text-left active:scale-98 transition"
-            >
-              <span className="font-bold text-teal-300 block">🇬🇧 Cotswolds Tour</span>
-              <span className="text-[10px] text-slate-400">4 Days (Poole, Broadway, Stow)</span>
-            </button>
-            <button
-              onClick={() => onSelectSample('japan')}
-              className="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-medium border border-slate-700/50 text-left active:scale-98 transition"
-            >
-              <span className="font-bold text-slate-200 block">🇯🇵 Japan Autumn</span>
-              <span className="text-[10px] text-slate-400">12 Days (Tokyo, Kyoto)</span>
-            </button>
-            <button
-              onClick={() => onSelectSample('europe')}
-              className="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-medium border border-slate-700/50 text-left active:scale-98 transition"
-            >
-              <span className="font-bold text-slate-200 block">🇪🇺 Europe Tour</span>
-              <span className="text-[10px] text-slate-400">10 Days (Paris, Rome)</span>
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={onExportCsv}
+          className="w-full min-h-[44px] px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 border border-slate-700/60 active:scale-98 transition"
+        >
+          <Download className="w-4 h-4 text-teal-400" />
+          <span>Export "{itinerary.title}" as CSV</span>
+        </button>
       </div>
 
       {/* Offline Travel Notes & Emergency Contacts */}
@@ -249,13 +353,17 @@ export const HubMobileView: React.FC<HubMobileViewProps> = ({
 
         {showPwaTip && (
           <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700 text-xs text-slate-300 space-y-2 mt-2">
-            <div>
-              <strong className="text-teal-300 block mb-0.5">iPhone / Safari:</strong>
-              <p className="text-[11px] text-slate-400">Tap the Share icon (<span className="text-white">□↑</span>) at the bottom of Safari, then select <strong>"Add to Home Screen"</strong>.</p>
+            <div className="space-y-1">
+              <p className="font-semibold text-teal-300">iPhone / Safari:</p>
+              <p className="text-[11px] text-slate-400">
+                Tap the <strong className="text-white">Share</strong> button (box with upward arrow) in the bottom bar, then tap <strong className="text-white">"Add to Home Screen"</strong>.
+              </p>
             </div>
-            <div>
-              <strong className="text-teal-300 block mb-0.5">Android / Chrome:</strong>
-              <p className="text-[11px] text-slate-400">Tap the three-dots menu (⋮) in the top right, then select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</p>
+            <div className="space-y-1 pt-1 border-t border-slate-700/60">
+              <p className="font-semibold text-teal-300">Android / Chrome:</p>
+              <p className="text-[11px] text-slate-400">
+                Tap the <strong className="text-white">Three Dots</strong> menu in the top-right corner, then select <strong className="text-white">"Install app"</strong> or <strong className="text-white">"Add to Home Screen"</strong>.
+              </p>
             </div>
           </div>
         )}
@@ -263,3 +371,4 @@ export const HubMobileView: React.FC<HubMobileViewProps> = ({
     </div>
   );
 };
+

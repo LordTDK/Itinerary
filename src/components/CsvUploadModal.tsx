@@ -172,15 +172,16 @@ export const CsvUploadModal: React.FC<CsvUploadModalProps> = ({
           {/* Trip Title input */}
           {activeTab !== 'template' && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
                 Trip Name / Title (Optional)
               </label>
               <input
                 type="text"
                 value={tripTitle}
                 onChange={(e) => setTripTitle(e.target.value)}
-                placeholder="e.g. Summer Holiday 2026: Japan Adventure"
-                className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                placeholder="e.g. Cotswolds Tour 2026 or Summer Roadtrip"
+                style={{ color: '#000000' }}
+                className="w-full px-3.5 py-2.5 text-sm text-black font-medium bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-600 placeholder:text-slate-400 shadow-sm"
               />
             </div>
           )}
@@ -243,15 +244,16 @@ export const CsvUploadModal: React.FC<CsvUploadModalProps> = ({
           {/* TAB 2: PASTE */}
           {activeTab === 'paste' && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
                 Paste raw CSV content
               </label>
               <textarea
                 rows={8}
                 value={pastedText}
                 onChange={(e) => { setPastedText(e.target.value); setError(null); }}
-                placeholder="Date,Time,Location,Activity,Category,Accommodation,Notes,Cost&#10;2026-09-18,09:00,Tokyo,Shibuya Sky,Sightseeing,Cerulean Tower,Booked ticket,$18"
-                className="w-full font-mono text-xs p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                placeholder="From,To,Date,Departure,Arrival,Duration,Notes,STAY DURATION,Costs,FromLong,FromLat,ToLong,ToLat&#10;Poole,Castle Combe,20/09/2026,07:00,09:00,02:00:00,SN14 7HH,02:00:00,£ 0.80,-1.987,50.715,-2.224,51.495"
+                style={{ color: '#000000' }}
+                className="w-full font-mono text-xs p-3.5 text-black font-medium bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-600 placeholder:text-slate-400 shadow-sm"
               />
             </div>
           )}
@@ -286,7 +288,7 @@ export const CsvUploadModal: React.FC<CsvUploadModalProps> = ({
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download Sample CSV Template</span>
+                  <span>Download CSV Format Template</span>
                 </button>
               </div>
             </div>
@@ -301,7 +303,7 @@ export const CsvUploadModal: React.FC<CsvUploadModalProps> = ({
             className="text-xs text-slate-600 hover:text-teal-700 font-medium inline-flex items-center gap-1"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Sample CSV</span>
+            <span>CSV Template</span>
           </button>
 
           <div className="flex items-center gap-2">

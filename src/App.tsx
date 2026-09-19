@@ -18,11 +18,14 @@ import {
 } from './utils/csvParser';
 import { calculateTripStatus } from './utils/tripCalculator';
 import { 
-  createCotswoldsTrip, 
-  createActiveJapanTrip, 
-  createEuropeSummerTrip 
-} from './data/sampleTrips';
-import { ItineraryData, MobileTab } from './types';
+  getSavedTrips, 
+  saveTrip, 
+  updateActiveTripData, 
+  deleteTrip, 
+  getActiveTripId, 
+  setActiveTripId 
+} from './utils/tripsStorage';
+import { ItineraryData, MobileTab, SavedTrip } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 
 import { MobileHeader } from './components/MobileHeader';
@@ -37,30 +40,33 @@ import { CsvUploadModal } from './components/CsvUploadModal';
 import { GithubDeployGuideModal } from './components/GithubDeployGuideModal';
 import { Smartphone, Maximize2, Github } from 'lucide-react';
 
-const STORAGE_KEY = 'cotswolds_holiday_itinerary_data_v2';
-
 export default function App() {
   const realToday = useMemo(() => getTodayString(), []);
   const geo = useGeolocation();
 
-  // Initialize itinerary with user's Cotswolds spreadsheet itinerary
-  const [itinerary, setItinerary] = useState<ItineraryData>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
-          return buildItineraryData(parsed.items, parsed.title || 'Cotswolds Holiday Tour');
-        }
-      }
-    } catch {
-      // ignore storage access error
+  // Saved trips stored on this device in localStorage
+  const [savedTrips, setSavedTrips] = useState<SavedTrip[]>(() => getSavedTrips());
+  const [activeTripId, setActiveTripIdState] = useState<string | null>(() => {
+    const activeId = getActiveTripId();
+    const trips = getSavedTrips();
+    if (activeId && trips.some(t => t.id === activeId)) {
+      return activeId;
     }
-    // Default to user's Cotswolds trip
-    return createCotswoldsTrip();
+    return trips[0]?.id || null;
   });
 
-  // Default currentDate: if realToday is outside trip range, start on Day 1 (2026-09-20)
+  // Active itinerary data
+  const [itinerary, setItinerary] = useState<ItineraryData>(() => {
+    const trips = getSavedTrips();
+    const activeId = getActiveTripId();
+    const found = trips.find(t => t.id === activeId) || trips[0];
+    if (found) {
+      return found.data;
+    }
+    return buildItineraryData([], 'Holiday Itinerary');
+  });
+
+  // Default currentDate: if realToday is outside trip range, start on Day 1
   const [currentDate, setCurrentDate] = useState<string>(() => {
     const diffStart = daysBetween(realToday, itinerary.startDate);
     const diffEnd = daysBetween(realToday, itinerary.endDate);
@@ -97,16 +103,7 @@ export default function App() {
     return calculateTripStatus(itinerary, currentDate);
   }, [itinerary, currentDate]);
 
-  // Persist itinerary to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(itinerary));
-    } catch {
-      // quota exceeded
-    }
-  }, [itinerary]);
-
-  // Toggle item completion with confetti
+  // Toggle item completion with confetti and persist to active saved trip
   // Notice: final destinations of the day (accommodation) cannot be toggled
   const handleToggleItemComplete = (itemId: string) => {
     setItinerary(prev => {
@@ -134,15 +131,26 @@ export default function App() {
         }
         return item;
       });
-      return buildItineraryData(updatedItems, prev.title);
+      const updated = buildItineraryData(updatedItems, prev.title);
+      if (activeTripId) {
+        updateActiveTripData(activeTripId, updated);
+        setSavedTrips(prevList => 
+          prevList.map(t => t.id === activeTripId ? { ...t, data: updated } : t)
+        );
+      }
+      return updated;
     });
   };
 
-  // Handle loading new CSV
+  // Handle uploading and saving a new CSV itinerary locally
   const handleLoadItinerary = (newItinerary: ItineraryData) => {
+    const { trip, trips } = saveTrip(newItinerary);
+    setSavedTrips(trips);
+    setActiveTripIdState(trip.id);
+    setActiveTripId(trip.id);
     setItinerary(newItinerary);
     setSelectedDayNumber(null);
-    showToast(`Loaded ${newItinerary.items.length} items across ${newItinerary.totalDays} days!`);
+    showToast(`Saved "${trip.title}" locally with ${newItinerary.items.length} stops!`);
 
     // Check if today is outside range
     const diffStart = daysBetween(realToday, newItinerary.startDate);
@@ -155,22 +163,53 @@ export default function App() {
     }
   };
 
-  // Switch sample trip
-  const handleSelectSample = (sampleKey: 'cotswolds' | 'japan' | 'europe') => {
-    let sample: ItineraryData;
-    if (sampleKey === 'cotswolds') {
-      sample = createCotswoldsTrip();
-      setCurrentDate(sample.startDate);
-    } else if (sampleKey === 'japan') {
-      sample = createActiveJapanTrip();
-      setCurrentDate(realToday);
+  // Switch to a different saved trip
+  const handleSelectTrip = (tripId: string) => {
+    const target = savedTrips.find(t => t.id === tripId);
+    if (!target) return;
+
+    setActiveTripIdState(tripId);
+    setActiveTripId(tripId);
+    setItinerary(target.data);
+    setSelectedDayNumber(null);
+
+    const diffStart = daysBetween(realToday, target.data.startDate);
+    const diffEnd = daysBetween(realToday, target.data.endDate);
+    if (diffStart > 0 || diffEnd < 0) {
+      setCurrentDate(target.data.startDate);
     } else {
-      sample = createEuropeSummerTrip();
       setCurrentDate(realToday);
     }
-    setItinerary(sample);
-    setSelectedDayNumber(null);
-    showToast(`Loaded ${sample.title}`);
+    showToast(`Switched to "${target.title}"`);
+  };
+
+  // Delete a saved trip from local storage
+  const handleDeleteTrip = (tripId: string) => {
+    const deletedTrip = savedTrips.find(t => t.id === tripId);
+    const updated = deleteTrip(tripId);
+    setSavedTrips(updated);
+
+    if (activeTripId === tripId) {
+      if (updated.length > 0) {
+        const next = updated[0];
+        setActiveTripIdState(next.id);
+        setActiveTripId(next.id);
+        setItinerary(next.data);
+        const diffStart = daysBetween(realToday, next.data.startDate);
+        const diffEnd = daysBetween(realToday, next.data.endDate);
+        if (diffStart > 0 || diffEnd < 0) {
+          setCurrentDate(next.data.startDate);
+        } else {
+          setCurrentDate(realToday);
+        }
+        showToast(`Deleted "${deletedTrip?.title || 'Trip'}". Switched to "${next.title}".`);
+      } else {
+        setActiveTripIdState(null);
+        showToast(`Deleted "${deletedTrip?.title || 'Trip'}".`);
+      }
+    } else {
+      showToast(`Deleted "${deletedTrip?.title || 'Trip'}".`);
+    }
   };
 
   // Export CSV
@@ -368,12 +407,15 @@ export default function App() {
               tripStatus={tripStatus}
               currentDate={currentDate}
               isSimulatedDate={isSimulatedDate}
+              savedTrips={savedTrips}
+              activeTripId={activeTripId}
+              onSelectTrip={handleSelectTrip}
+              onDeleteTrip={handleDeleteTrip}
               onResetDate={() => setCurrentDate(realToday)}
               onSelectDate={(d) => setCurrentDate(d)}
               onOpenUploadModal={() => setIsUploadModalOpen(true)}
               onOpenGithubGuide={() => setIsGithubGuideOpen(true)}
               onExportCsv={handleExportCsv}
-              onSelectSample={handleSelectSample}
             />
           )}
 
