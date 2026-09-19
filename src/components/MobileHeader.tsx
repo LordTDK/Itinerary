@@ -35,7 +35,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onShareOrExport,
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800/80 shadow-md">
+    <header 
+      className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800/80 shadow-md"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
       {/* Mobile Top Status / Trip Identity Bar */}
       <div className="px-4 pt-3 pb-2.5">
         <div className="flex items-center justify-between gap-2">
@@ -48,7 +51,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-teal-400">
-                  Holiday Itinerary
+                  Merlins Travel App
                 </span>
                 {tripStatus.phase === 'active' && tripStatus.currentDayNumber && (
                   <span className="text-[10px] font-semibold text-slate-400">

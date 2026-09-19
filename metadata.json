@@ -1,6 +1,6 @@
 {
-  "name": "Holiday Itinerary Access Interface",
-  "description": "Mobile-first holiday itinerary access interface with dynamic date-based scheduling, GPS starting point navigation, and CSV import/export.",
+  "name": "Merlins Travel App",
+  "description": "Mobile-first holiday itinerary and travel companion with dynamic scheduling, GPS navigation, and offline route management.",
   "requestFramePermissions": [
     "geolocation"
   ],

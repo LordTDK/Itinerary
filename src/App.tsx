@@ -265,7 +265,7 @@ export default function App() {
       <div className="hidden sm:flex items-center justify-between w-full max-w-2xl px-4 py-2 text-xs text-slate-400 border-b border-slate-900 bg-slate-950/90 z-20">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-teal-400" />
-          <span className="font-semibold text-slate-200">Cotswolds Itinerary Mobile Navigator</span>
+          <span className="font-semibold text-slate-200">Merlins Travel App</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800">
