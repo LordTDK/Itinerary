@@ -1,0 +1,8 @@
+{
+  "name": "Holiday Itinerary Access Interface",
+  "description": "Mobile-first holiday itinerary access interface with dynamic date-based scheduling, GPS starting point navigation, and CSV import/export.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
